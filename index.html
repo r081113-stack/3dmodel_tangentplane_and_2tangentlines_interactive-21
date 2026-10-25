@@ -167,6 +167,21 @@
       transition: opacity 0.15s ease;
       box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
+    .pdf-link {
+      display: block;
+      margin-top: 14px;
+      padding: 8px 10px;
+      text-align: center;
+      text-decoration: none;
+      font-size: 0.8rem;
+      color: #e0e0ff;
+      background: rgba(99, 102, 241, 0.18);
+      border: 1px solid rgba(99, 102, 241, 0.55);
+      border-radius: 6px;
+    }
+    .pdf-link:hover {
+      background: rgba(99, 102, 241, 0.35);
+    }
   </style>
 </head>
 <body>
@@ -181,12 +196,7 @@
       曲面 $S: z = f(x,y)$ 上の点 $(a,b)$ において：<br>
       ・平面 $A: x=a$ 上の接線 $l_a$<br>
       ・平面 $B: y=b$ 上の接線 $l_b$<br>
-      接平面 $\pi$ は $l_a, l_b$ の両方を含む．
-
-      <div style="margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 6px;">
-        📄 <a href="./differential-hypotenuse.pdf" target="_blank" style="color: #818cf8; text-decoration: none;">参考資料：直角三角形の斜辺の増分と全微分 (PDF)</a>
-      </div>
-      
+      接平面 $\pi$ は $l_a, l_b$ の両方を含みます。
     </div>
 
     <!-- 曲面選択ドロップダウン -->
@@ -226,6 +236,9 @@
       <div class="legend-item"><span class="legend-color" style="background: #10b981;"></span> 平面 $B: y=b$ / 接線 $l_b$ (平面B上)</div>
       <div class="legend-item"><span class="legend-color" style="background: #f59e0b;"></span> 接平面 $\pi$</div>
     </div>
+
+    <!-- 補足資料(PDF)へのリンク: index.html と同じフォルダに PDF を置くこと -->
+    <a class="pdf-link" href="%E5%85%A8%E5%BE%AE%E5%88%86%E3%81%AB%E3%82%88%E3%82%8B%E6%96%9C%E8%BE%BA%E3%81%AE%E5%A2%97%E5%88%86.pdf" target="_blank" rel="noopener">📄 補足資料：全微分による斜辺の増分（PDF）</a>
   </div>
 
   <script>
@@ -289,12 +302,19 @@
 
     // 画面全体を上方向へシフトする量（画面高さに対する割合）。曲面の最下部が下枠にかからないようにする
     const VIEW_SHIFT_UP = 0.07;
+    // 曲面の中心(0,1,0)が初期視点で画面のどこに映るか(NDCのx座標×アスペクト比)。初期化後に一度だけ計算する
+    let centerK = 0;
     function applyViewOffset() {
       const w = window.innerWidth;
       const h = window.innerHeight;
-      camera.setViewOffset(w, h, 0, h * VIEW_SHIFT_UP, w, h);
+      // 左の操作パネルを除いた右側領域の中央に曲面が来るよう、横方向にもシフトする
+      // (幅が狭い画面ではパネルが重なるため、画面中央のままにする)
+      const panelEl = document.getElementById('ui-panel');
+      const panelRight = (w > 760 && panelEl) ? panelEl.getBoundingClientRect().right : 0;
+      const targetX = (panelRight + w) / 2;
+      const centerX = (centerK / camera.aspect + 1) / 2 * w;
+      camera.setViewOffset(w, h, centerX - targetX, h * VIEW_SHIFT_UP, w, h);
     }
-    applyViewOffset();
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -307,6 +327,12 @@
     controls.dampingFactor = 0.05;
     controls.target.set(0.68, 1.86, 0.78); // 注視点(上記カメラ位置とセットで初期視点が決まる)
     controls.maxPolarAngle = Math.PI / 2 + 0.1;
+
+    // 初期視点での曲面中心の画面位置を求め、そのうえで表示位置を調整する
+    camera.lookAt(controls.target);
+    camera.updateMatrixWorld();
+    centerK = new THREE.Vector3(0, 1, 0).project(camera).x * camera.aspect;
+    applyViewOffset();
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
     scene.add(ambientLight);
